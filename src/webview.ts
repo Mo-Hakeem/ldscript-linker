@@ -83,10 +83,11 @@ export function getLdWebviewContent(parsed: ParsedLd, fileName: string): string 
 <body>
 <div id="toolbar">
   <span id="title" class="mono"></span>
-  <label class="muted">ENTRY <input id="entryInput" class="mono" style="width:150px;" type="text" placeholder="Reset_Handler"></label>
+  <span id="entryWrap"></span>
   <input id="search" type="text" placeholder="Filter regions, sections, symbols...">
   <span class="right">
     <span class="muted" id="syncStatus"></span>
+    <button id="toggleEditBtn" type="button">Enable Editing</button>
     <button id="openRawBtn" type="button">Edit Raw Text</button>
   </span>
 </div>
@@ -95,11 +96,13 @@ export function getLdWebviewContent(parsed: ParsedLd, fileName: string): string 
 <script>
 const vscode = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : null;
 let DATA = ${payload};
+let editMode = false;
 const titleEl = document.getElementById('title');
-const entryInput = document.getElementById('entryInput');
+const entryWrap = document.getElementById('entryWrap');
 const searchEl = document.getElementById('search');
 const contentEl = document.getElementById('content');
 const syncStatusEl = document.getElementById('syncStatus');
+const toggleEditBtn = document.getElementById('toggleEditBtn');
 
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -113,23 +116,40 @@ function syncToDoc() {
 
 function render() {
   titleEl.textContent = DATA.fileName;
-  entryInput.value = DATA.entry || '';
+  if (!editMode) {
+    entryWrap.innerHTML = DATA.entry ? '<span class="muted mono">(ENTRY: ' + esc(DATA.entry) + ')</span>' : '';
+  } else {
+    entryWrap.innerHTML = '<label class="muted">ENTRY <input id="entryInput" class="mono" style="width:150px;" type="text" value="' + esc(DATA.entry || '') + '" placeholder="Reset_Handler"></label>';
+    document.getElementById('entryInput').addEventListener('change', (ev) => {
+      DATA.entry = ev.target.value.trim() || undefined;
+      syncToDoc();
+    });
+  }
   const q = searchEl.value.trim().toLowerCase();
   let html = '';
 
   const regions = DATA.regions.map((r, idx) => ({ r, idx })).filter(({ r }) => !q || r.name.toLowerCase().includes(q));
   html += '<div class="section-bar"><h3>Memory Regions (' + regions.length + ')</h3>' +
-    '<button class="primary" id="addRegBtn" type="button">+ Add Region</button></div><div class="cards">';
+    (editMode ? '<button class="primary" id="addRegBtn" type="button">+ Add Region</button>' : '') + '</div><div class="cards">';
   for (const { r, idx } of regions) {
-    html += '<div class="card">' +
-      '<div class="card-head">' +
-        '<input class="mono sec-name" style="width:140px;" data-reg="' + idx + '" data-k="name" type="text" value="' + esc(r.name) + '">' +
-        '<input class="mono" style="width:64px;" data-reg="' + idx + '" data-k="attributes" type="text" value="' + esc(r.attributes) + '" placeholder="rx">' +
-        '<button class="danger" data-delreg="' + idx + '" type="button">&times;</button>' +
-      '</div>' +
-      '<div class="kv"><span class="muted">Origin</span><input class="mono" data-reg="' + idx + '" data-k="originRaw" type="text" value="' + esc(r.originRaw) + '"></div>' +
-      '<div class="kv"><span class="muted">Length</span><input class="mono" data-reg="' + idx + '" data-k="lengthRaw" type="text" value="' + esc(r.lengthRaw) + '"></div>' +
-    '</div>';
+    if (!editMode) {
+      html += '<div class="card">' +
+        '<div class="card-head"><span class="sec-name mono" style="font-size:13px;">' + esc(r.name) + '</span>' +
+        '<span class="muted mono">' + esc(r.attributes || '-') + '</span></div>' +
+        '<div class="muted mono">Origin: <span style="color:var(--vscode-textLink-foreground,#569cd6);">' + esc(r.originRaw) + '</span></div>' +
+        '<div class="muted mono">Length: ' + esc(r.lengthRaw) + '</div>' +
+      '</div>';
+    } else {
+      html += '<div class="card">' +
+        '<div class="card-head">' +
+          '<input class="mono sec-name" style="width:140px;" data-reg="' + idx + '" data-k="name" type="text" value="' + esc(r.name) + '">' +
+          '<input class="mono" style="width:64px;" data-reg="' + idx + '" data-k="attributes" type="text" value="' + esc(r.attributes) + '" placeholder="rx">' +
+          '<button class="danger" data-delreg="' + idx + '" type="button">&times;</button>' +
+        '</div>' +
+        '<div class="kv"><span class="muted">Origin</span><input class="mono" data-reg="' + idx + '" data-k="originRaw" type="text" value="' + esc(r.originRaw) + '"></div>' +
+        '<div class="kv"><span class="muted">Length</span><input class="mono" data-reg="' + idx + '" data-k="lengthRaw" type="text" value="' + esc(r.lengthRaw) + '"></div>' +
+      '</div>';
+    }
   }
   html += '</div>';
 
@@ -139,56 +159,81 @@ function render() {
     s.symbols.some(x => x.toLowerCase().includes(q))
   );
   html += '<div class="section-bar"><h3>Output Sections (' + secs.length + ')</h3>' +
-    '<button class="primary" id="addSecBtn" type="button">+ Add Section</button></div>';
-  html += '<table><thead><tr><th style="width:150px;">Section</th><th style="width:85px;">Flags</th><th style="width:100px;">VMA (&gt;)</th><th style="width:100px;">LMA (AT&gt;)</th><th>Input Patterns (1/line)</th><th style="width:180px;">Symbols (comma-sep)</th><th style="width:36px;"></th></tr></thead><tbody>';
+    (editMode ? '<button class="primary" id="addSecBtn" type="button">+ Add Section</button>' : '') + '</div>';
+  html += '<table><thead><tr><th style="width:150px;">Section</th><th style="width:85px;">Flags</th><th style="width:100px;">VMA (&gt;)</th><th style="width:100px;">LMA (AT&gt;)</th><th>Input Patterns</th><th style="width:180px;">Symbols</th>' + (editMode ? '<th style="width:36px;"></th>' : '') + '</tr></thead><tbody>';
   for (const { s, idx } of secs) {
-    html += '<tr>' +
-      '<td><input class="mono sec-name" data-sec="' + idx + '" data-k="name" type="text" value="' + esc(s.name) + '"></td>' +
-      '<td><input class="mono" data-sec="' + idx + '" data-k="flags" type="text" value="' + esc(s.flags) + '" placeholder="NOLOAD"></td>' +
-      '<td><input class="mono" data-sec="' + idx + '" data-k="vmaRegion" type="text" value="' + esc(s.vmaRegion) + '"></td>' +
-      '<td><input class="mono" data-sec="' + idx + '" data-k="lmaRegion" type="text" value="' + esc(s.lmaRegion) + '"></td>' +
-      '<td><textarea class="mono" data-sec="' + idx + '" data-k="inputs">' + esc(s.inputs.join('\\n')) + '</textarea></td>' +
-      '<td><input class="mono" data-sec="' + idx + '" data-k="symbols" type="text" value="' + esc(s.symbols.join(', ')) + '"></td>' +
-      '<td><button class="danger" data-delsec="' + idx + '" type="button">&times;</button></td>' +
-    '</tr>';
+    if (!editMode) {
+      const inps = s.inputs.map(x => '<div class="mono muted">' + esc(x) + '</div>').join('') || '<span class="muted">-</span>';
+      const syms = s.symbols.map(x => '<span class="mono" style="display:inline-block;margin:1px 4px 1px 0;padding:1px 5px;border-radius:3px;font-size:10px;background:rgba(181,206,168,0.14);color:#b5cea8;">' + esc(x) + '</span>').join('') || '<span class="muted">-</span>';
+      html += '<tr>' +
+        '<td class="mono sec-name">' + esc(s.name) + '</td>' +
+        '<td class="mono muted">' + esc(s.flags || '-') + '</td>' +
+        '<td class="mono">' + esc(s.vmaRegion || '-') + '</td>' +
+        '<td class="mono muted">' + esc(s.lmaRegion || '-') + '</td>' +
+        '<td>' + inps + '</td>' +
+        '<td>' + syms + '</td>' +
+      '</tr>';
+    } else {
+      html += '<tr>' +
+        '<td><input class="mono sec-name" data-sec="' + idx + '" data-k="name" type="text" value="' + esc(s.name) + '"></td>' +
+        '<td><input class="mono" data-sec="' + idx + '" data-k="flags" type="text" value="' + esc(s.flags) + '" placeholder="NOLOAD"></td>' +
+        '<td><input class="mono" data-sec="' + idx + '" data-k="vmaRegion" type="text" value="' + esc(s.vmaRegion) + '"></td>' +
+        '<td><input class="mono" data-sec="' + idx + '" data-k="lmaRegion" type="text" value="' + esc(s.lmaRegion) + '"></td>' +
+        '<td><textarea class="mono" data-sec="' + idx + '" data-k="inputs">' + esc(s.inputs.join('\\n')) + '</textarea></td>' +
+        '<td><input class="mono" data-sec="' + idx + '" data-k="symbols" type="text" value="' + esc(s.symbols.join(', ')) + '"></td>' +
+        '<td><button class="danger" data-delsec="' + idx + '" type="button">&times;</button></td>' +
+      '</tr>';
+    }
   }
   html += '</tbody></table>';
 
   const syms = DATA.symbols.map((s, idx) => ({ s, idx })).filter(({ s }) => !q || s.name.toLowerCase().includes(q) || s.expr.toLowerCase().includes(q));
   html += '<div class="section-bar"><h3>Top-Level Symbols (' + syms.length + ')</h3>' +
-    '<button class="primary" id="addSymBtn" type="button">+ Add Symbol</button></div>';
-  html += '<table><thead><tr><th style="width:200px;">Symbol</th><th style="width:110px;">Kind</th><th>Expression</th><th style="width:36px;"></th></tr></thead><tbody>';
+    (editMode ? '<button class="primary" id="addSymBtn" type="button">+ Add Symbol</button>' : '') + '</div>';
+  html += '<table><thead><tr><th style="width:200px;">Symbol</th><th style="width:110px;">Kind</th><th>Expression</th>' + (editMode ? '<th style="width:36px;"></th>' : '') + '</tr></thead><tbody>';
   for (const { s, idx } of syms) {
-    html += '<tr>' +
-      '<td><input class="mono" data-sym="' + idx + '" data-k="name" type="text" value="' + esc(s.name) + '"></td>' +
-      '<td><select class="mono" data-sym="' + idx + '" data-k="provide"><option value="false"' + (!s.provide ? ' selected' : '') + '>ASSIGN</option><option value="true"' + (s.provide ? ' selected' : '') + '>PROVIDE</option></select></td>' +
-      '<td><input class="mono" data-sym="' + idx + '" data-k="expr" type="text" value="' + esc(s.expr) + '"></td>' +
-      '<td><button class="danger" data-delsym="' + idx + '" type="button">&times;</button></td>' +
-    '</tr>';
+    if (!editMode) {
+      html += '<tr><td class="mono"><strong>' + esc(s.name) + '</strong></td><td class="muted">' + (s.provide ? 'PROVIDE' : 'ASSIGN') + '</td><td class="mono">' + esc(s.expr) + '</td></tr>';
+    } else {
+      html += '<tr>' +
+        '<td><input class="mono" data-sym="' + idx + '" data-k="name" type="text" value="' + esc(s.name) + '"></td>' +
+        '<td><select class="mono" data-sym="' + idx + '" data-k="provide"><option value="false"' + (!s.provide ? ' selected' : '') + '>ASSIGN</option><option value="true"' + (s.provide ? ' selected' : '') + '>PROVIDE</option></select></td>' +
+        '<td><input class="mono" data-sym="' + idx + '" data-k="expr" type="text" value="' + esc(s.expr) + '"></td>' +
+        '<td><button class="danger" data-delsym="' + idx + '" type="button">&times;</button></td>' +
+      '</tr>';
+    }
   }
   html += '</tbody></table>';
 
   const asserts = DATA.asserts.map((a, idx) => ({ a, idx }));
-  html += '<div class="section-bar"><h3>Assertions (' + asserts.length + ')</h3>' +
-    '<button class="primary" id="addAssertBtn" type="button">+ Add Assert</button></div>';
-  if (asserts.length) {
-    html += '<table><thead><tr><th>Condition</th><th>Message</th><th style="width:36px;"></th></tr></thead><tbody>';
-    for (const { a, idx } of asserts) {
-      html += '<tr>' +
-        '<td><input class="mono" data-asrt="' + idx + '" data-k="condition" type="text" value="' + esc(a.condition) + '"></td>' +
-        '<td><input data-asrt="' + idx + '" data-k="message" type="text" value="' + esc(a.message) + '"></td>' +
-        '<td><button class="danger" data-delasrt="' + idx + '" type="button">&times;</button></td>' +
-      '</tr>';
+  if (asserts.length || editMode) {
+    html += '<div class="section-bar"><h3>Assertions (' + asserts.length + ')</h3>' +
+      (editMode ? '<button class="primary" id="addAssertBtn" type="button">+ Add Assert</button>' : '') + '</div>';
+    if (asserts.length) {
+      html += '<table><thead><tr><th>Condition</th><th>Message</th>' + (editMode ? '<th style="width:36px;"></th>' : '') + '</tr></thead><tbody>';
+      for (const { a, idx } of asserts) {
+        if (!editMode) {
+          html += '<tr><td class="mono">' + esc(a.condition) + '</td><td>' + esc(a.message) + '</td></tr>';
+        } else {
+          html += '<tr>' +
+            '<td><input class="mono" data-asrt="' + idx + '" data-k="condition" type="text" value="' + esc(a.condition) + '"></td>' +
+            '<td><input data-asrt="' + idx + '" data-k="message" type="text" value="' + esc(a.message) + '"></td>' +
+            '<td><button class="danger" data-delasrt="' + idx + '" type="button">&times;</button></td>' +
+          '</tr>';
+        }
+      }
+      html += '</tbody></table>';
     }
-    html += '</tbody></table>';
   }
 
   contentEl.innerHTML = html;
 }
 
-entryInput.addEventListener('change', () => {
-  DATA.entry = entryInput.value.trim() || undefined;
-  syncToDoc();
+toggleEditBtn.addEventListener('click', () => {
+  editMode = !editMode;
+  toggleEditBtn.textContent = editMode ? 'Lock (Read-Only)' : 'Enable Editing';
+  toggleEditBtn.classList.toggle('primary', editMode);
+  render();
 });
 
 contentEl.addEventListener('change', (e) => {
