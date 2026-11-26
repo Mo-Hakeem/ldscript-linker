@@ -29,6 +29,34 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "customEditors": [
+      {
+        "viewType": "ldscript.ldView",
+        "displayName": "Linker Script Analyzer",
+        "selector": [
+          { "filenamePattern": "*.ld" },
+          { "filenamePattern": "*.lds" },
+          { "filenamePattern": "*.ldscript" }
+        ],
+        "priority": "option"
+      }
+    ],
+    "commands": [
+      {
+        "command": "ldscript.openAnalyzer",
+        "title": "Open Linker Script Analyzer",
+        "icon": "$(graph)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "ldscript.openAnalyzer",
+          "when": "resourceLangId == ld",
+          "group": "navigation"
+        }
+      ]
+    },
     "languages": [
       {
         "id": "ld",
