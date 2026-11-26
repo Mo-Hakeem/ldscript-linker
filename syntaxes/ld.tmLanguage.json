@@ -1,0 +1,143 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "GNU Linker Script",
+  "scopeName": "source.ld",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#functions" },
+    { "include": "#memory-attrs" },
+    { "include": "#section-flags" },
+    { "include": "#location-counter" },
+    { "include": "#section-names" },
+    { "include": "#region-redirect" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.block.ld",
+          "begin": "/\\*",
+          "end": "\\*/"
+        },
+        {
+          "name": "comment.line.double-slash.ld",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.line.number-sign.ld",
+          "match": "^\\s*#.*$"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.ld",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.ld",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.ld",
+          "match": "\\b0[xX][0-9a-fA-F]+[KkMmGg]?\\b"
+        },
+        {
+          "name": "constant.numeric.binary.ld",
+          "match": "\\b0[bB][01]+[KkMmGg]?\\b"
+        },
+        {
+          "name": "constant.numeric.decimal.ld",
+          "match": "\\b[0-9]+[KkMmGg]?\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.ld",
+          "match": "\\b(MEMORY|SECTIONS|PHDRS|VERSION|OVERLAY|NOCROSSREFS|NOCROSSREFS_TO|ASSERT)\\b"
+        },
+        {
+          "name": "keyword.other.directive.ld",
+          "match": "\\b(ENTRY|INCLUDE|INPUT|GROUP|OUTPUT|OUTPUT_FORMAT|OUTPUT_ARCH|SEARCH_DIR|STARTUP|TARGET|EXTERN|FORCE_COMMON_ALLOCATION|INHIBIT_COMMON_ALLOCATION|FORCE_GROUP_ALLOCATION|REGION_ALIAS|PROVIDE|PROVIDE_HIDDEN|HIDDEN|AS_NEEDED)\\b"
+        },
+        {
+          "name": "storage.modifier.ld",
+          "match": "\\b(ORIGIN|org|o|LENGTH|len|l|AT|NOLOAD|DSECT|COPY|INFO|READONLY|TYPE|ONLY_IF_RO|ONLY_IF_RW|SPECIAL|ALIGN_WITH_INPUT|SUBALIGN|COMMON|DISCARD)\\b"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "support.function.builtin.ld",
+          "match": "\\b(KEEP|SORT|SORT_BY_NAME|SORT_BY_ALIGNMENT|SORT_BY_INIT_PRIORITY|SORT_NONE|EXCLUDE_FILE|ALIGN|ADDR|LOADADDR|SIZEOF|SIZEOF_HEADERS|ALIGNOF|MAX|MIN|NEXT|DEFINED|ABSOLUTE|SEGMENT_START|CONSTANT|DATA_SEGMENT_ALIGN|DATA_SEGMENT_RELRO_END|DATA_SEGMENT_END|LOG2CEIL|FILL|BYTE|SHORT|LONG|QUAD|SQUAD|CREATE_OBJECT_SYMBOLS|CONSTRUCTORS|FLAGS|FILEHDR|PHDRS)\\b"
+        }
+      ]
+    },
+    "memory-attrs": {
+      "patterns": [
+        {
+          "name": "storage.type.memory-attr.ld",
+          "match": "\\(\\s*[!rRwWxXaAiIlL]+\\s*\\)"
+        }
+      ]
+    },
+    "section-flags": {
+      "patterns": [
+        {
+          "name": "entity.name.section.discard.ld",
+          "match": "/DISCARD/"
+        }
+      ]
+    },
+    "location-counter": {
+      "patterns": [
+        {
+          "name": "variable.language.location-counter.ld",
+          "match": "(?<![A-Za-z0-9_\\.])\\.(?![A-Za-z0-9_\\.])"
+        }
+      ]
+    },
+    "section-names": {
+      "patterns": [
+        {
+          "name": "entity.name.section.ld",
+          "match": "(?<![A-Za-z0-9_])\\.[A-Za-z_][A-Za-z0-9_.*-]*"
+        }
+      ]
+    },
+    "region-redirect": {
+      "patterns": [
+        {
+          "match": "(AT\\s*>|>)\\s*([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.operator.redirect.ld" },
+            "2": { "name": "entity.name.type.memory-region.ld" }
+          }
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.assignment.ld",
+          "match": "(\\+=|-=|\\*=|/=|<<=|>>=|&=|\\|=|=)"
+        },
+        {
+          "name": "keyword.operator.arithmetic.ld",
+          "match": "(==|!=|<=|>=|<<|>>|&&|\\|\\||[+\\-*/%&|^~!<>?:])"
+        }
+      ]
+    }
+  }
+}

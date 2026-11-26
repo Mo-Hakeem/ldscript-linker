@@ -1,0 +1,9 @@
+.vscode/
+.gitignore
+src/
+node_modules/
+tsconfig.json
+*.ps1
+*.vsix
+*.zip
+vsix_stage/

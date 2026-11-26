@@ -1,0 +1,81 @@
+{
+  "Entry Point": {
+    "prefix": "entry",
+    "body": ["ENTRY(${1:Reset_Handler})"],
+    "description": "Define linker entry point symbol"
+  },
+  "Memory Block": {
+    "prefix": "memory",
+    "body": [
+      "MEMORY",
+      "{",
+      "\t${1:FLASH} (rx)  : ORIGIN = ${2:0x00000000}, LENGTH = ${3:256K}",
+      "\t${4:RAM}   (rwx) : ORIGIN = ${5:0x20000000}, LENGTH = ${6:64K}",
+      "}"
+    ],
+    "description": "Define MEMORY regions"
+  },
+  "Sections Block": {
+    "prefix": "sections",
+    "body": [
+      "SECTIONS",
+      "{",
+      "\t$0",
+      "}"
+    ],
+    "description": "Define SECTIONS block"
+  },
+  "Output Section": {
+    "prefix": "sec",
+    "body": [
+      ".${1:text} :",
+      "{",
+      "\t. = ALIGN(${2:4});",
+      "\tKEEP(*(.${3:isr_vector}))",
+      "\t*(.${1:text}*)",
+      "\t. = ALIGN(${2:4});",
+      "} > ${4:FLASH}"
+    ],
+    "description": "Output section placed in a memory region"
+  },
+  "Initialized Data Section (LMA -> VMA)": {
+    "prefix": "data_at",
+    "body": [
+      "_sidata = LOADADDR(.data);",
+      ".data :",
+      "{",
+      "\t. = ALIGN(4);",
+      "\t_sdata = .;",
+      "\t*(.data*)",
+      "\t. = ALIGN(4);",
+      "\t_edata = .;",
+      "} > ${1:RAM} AT> ${2:FLASH}"
+    ],
+    "description": "Initialized .data section copied from FLASH to RAM"
+  },
+  "BSS Section": {
+    "prefix": "bss",
+    "body": [
+      ".bss (NOLOAD) :",
+      "{",
+      "\t. = ALIGN(4);",
+      "\t_sbss = .;",
+      "\t*(.bss*)",
+      "\t*(COMMON)",
+      "\t. = ALIGN(4);",
+      "\t_ebss = .;",
+      "} > ${1:RAM}"
+    ],
+    "description": "Zero-initialized .bss section"
+  },
+  "Provide Symbol": {
+    "prefix": "provide",
+    "body": ["PROVIDE(${1:_estack} = ${2:ORIGIN(RAM) + LENGTH(RAM)});"],
+    "description": "Provide default symbol if undefined"
+  },
+  "Assert Check": {
+    "prefix": "assert",
+    "body": ["ASSERT(${1:_end <= ORIGIN(RAM) + LENGTH(RAM)}, \"${2:RAM overflow}\")"],
+    "description": "Linker assertion check"
+  }
+}

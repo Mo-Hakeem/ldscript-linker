@@ -1,0 +1,72 @@
+{
+  "name": "ldscript-linker",
+  "displayName": "Linker Script (GNU LD)",
+  "description": "Syntax highlighting, outline symbols, size hover, snippets, and formatting config for GNU Linker Scripts (.ld, .lds).",
+  "version": "0.1.0",
+  "publisher": "MohamedHakeem",
+  "license": "MIT",
+  "icon": "icon.png",
+  "keywords": [
+    "linker",
+    "linker-script",
+    "ld",
+    "lds",
+    "gnu-ld",
+    "embedded",
+    "firmware",
+    "gcc"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:ld"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "ld",
+        "aliases": [
+          "Linker Script",
+          "GNU LD",
+          "ld"
+        ],
+        "extensions": [
+          ".ld",
+          ".lds",
+          ".ldscript"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ld",
+        "scopeName": "source.ld",
+        "path": "./syntaxes/ld.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "ld",
+        "path": "./snippets/ld.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}
