@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { parseLinkerScript } from './parser';
+import { parseLinkerScript, serializeLinkerScript } from './parser';
 import { getLdWebviewContent } from './webview';
 
 const KEYWORD_DOCS: Record<string, string> = {
@@ -153,75 +153,53 @@ class LdHoverProvider implements vscode.HoverProvider {
   }
 }
 
-class LdViewProvider implements vscode.CustomReadonlyEditorProvider {
+class LdViewProvider implements vscode.CustomTextEditorProvider {
   public static readonly viewType = 'ldscript.ldView';
 
-  public openCustomDocument(
-    uri: vscode.Uri,
-    _openContext: vscode.CustomDocumentOpenContext,
-    _token: vscode.CancellationToken
-  ): vscode.CustomDocument {
-    return { uri, dispose: () => {} };
-  }
-
-  public async resolveCustomEditor(
-    document: vscode.CustomDocument,
+  public async resolveCustomTextEditor(
+    document: vscode.TextDocument,
     webviewPanel: vscode.WebviewPanel,
     _token: vscode.CancellationToken
   ): Promise<void> {
     webviewPanel.webview.options = { enableScripts: true };
-    const fsPath = document.uri.fsPath;
-    const baseName = path.basename(fsPath) || fsPath;
-    webviewPanel.title = `${baseName} (ld)`;
+    const baseName = path.basename(document.uri.fsPath) || document.uri.fsPath;
 
-    let initialized = false;
-    const load = async () => {
-      try {
-        const raw = await vscode.workspace.fs.readFile(document.uri);
-        const text = Buffer.from(raw).toString('utf8');
-        const parsed = parseLinkerScript(text);
-        if (!initialized) {
-          initialized = true;
-          webviewPanel.webview.html = getLdWebviewContent(parsed, baseName);
-        } else {
-          void webviewPanel.webview.postMessage({
-            type: 'update',
-            payload: { fileName: baseName, ...parsed },
-          });
-        }
-      } catch (err) {
-        initialized = false;
-        webviewPanel.webview.html = `<!DOCTYPE html><body style="font-family:sans-serif;padding:16px;color:#f48771">
-          Failed to parse linker script: ${String(err)}</body>`;
-      }
-    };
-
-    await load();
+    let ignoreNextChange = false;
+    const initialParsed = parseLinkerScript(document.getText());
+    webviewPanel.webview.html = getLdWebviewContent(initialParsed, baseName);
 
     const msgSub = webviewPanel.webview.onDidReceiveMessage(async (msg) => {
-      if (msg && msg.type === 'openRaw') {
+      if (!msg || typeof msg !== 'object') return;
+      if (msg.type === 'openRaw') {
         await vscode.commands.executeCommand('vscode.openWith', document.uri, 'default');
+      } else if (msg.type === 'applyData' && msg.data) {
+        const nextText = serializeLinkerScript(msg.data);
+        const edit = new vscode.WorkspaceEdit();
+        const fullRange = new vscode.Range(
+          document.positionAt(0),
+          document.positionAt(document.getText().length)
+        );
+        edit.replace(document.uri, fullRange, nextText);
+        ignoreNextChange = true;
+        await vscode.workspace.applyEdit(edit);
       }
     });
 
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const scheduleLoad = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => { void load(); }, 250);
-    };
     const changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
-      if (e.document.uri.toString() === document.uri.toString()) scheduleLoad();
+      if (e.document.uri.toString() !== document.uri.toString()) return;
+      if (ignoreNextChange) {
+        ignoreNextChange = false;
+        return;
+      }
+      const parsed = parseLinkerScript(document.getText());
+      void webviewPanel.webview.postMessage({
+        type: 'update',
+        payload: { fileName: baseName, ...parsed },
+      });
     });
-    const watcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(vscode.Uri.file(path.dirname(fsPath)), baseName)
-    );
-    watcher.onDidChange(scheduleLoad);
-    watcher.onDidCreate(scheduleLoad);
 
     webviewPanel.onDidDispose(() => {
-      if (timer) clearTimeout(timer);
       changeSub.dispose();
-      watcher.dispose();
       msgSub.dispose();
     });
   }

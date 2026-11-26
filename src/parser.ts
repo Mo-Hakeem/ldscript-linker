@@ -151,7 +151,7 @@ export function parseLinkerScript(text: string): ParsedLd {
           const symM = /^(?:PROVIDE(?:_HIDDEN)?\s*\(\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(trimmed);
           if (symM) {
             currentSec.symbols.push(symM[1]);
-          } else if (trimmed.includes('*(') || trimmed.startsWith('KEEP') || trimmed.startsWith('SORT')) {
+          } else if (trimmed.includes('*(') || trimmed.startsWith('KEEP') || trimmed.startsWith('SORT') || trimmed.startsWith('. =') || trimmed.startsWith('.=')) {
             currentSec.inputs.push(trimmed);
           }
         }
@@ -166,4 +166,60 @@ export function parseLinkerScript(text: string): ParsedLd {
   }
 
   return { entry, regions, sections, symbols, asserts };
+}
+
+export function serializeLinkerScript(d: ParsedLd): string {
+  const lines: string[] = [];
+  if (d.entry) {
+    lines.push(`ENTRY(${d.entry})`);
+    lines.push('');
+  }
+
+  for (const s of d.symbols) {
+    if (s.provide) {
+      lines.push(`PROVIDE(${s.name} = ${s.expr});`);
+    } else {
+      lines.push(`${s.name} = ${s.expr};`);
+    }
+  }
+  if (d.symbols.length) lines.push('');
+
+  if (d.regions.length) {
+    lines.push('MEMORY');
+    lines.push('{');
+    for (const r of d.regions) {
+      const attr = r.attributes ? ` (${r.attributes})` : '';
+      lines.push(`  ${r.name}${attr} : ORIGIN = ${r.originRaw}, LENGTH = ${r.lengthRaw}`);
+    }
+    lines.push('}');
+    lines.push('');
+  }
+
+  if (d.sections.length) {
+    lines.push('SECTIONS');
+    lines.push('{');
+    for (const s of d.sections) {
+      const flg = s.flags ? ` (${s.flags})` : '';
+      lines.push(`  ${s.name}${flg} :`);
+      lines.push('  {');
+      for (const inp of s.inputs) {
+        lines.push(`    ${inp}`);
+      }
+      for (const sym of s.symbols) {
+        lines.push(`    ${sym} = .;`);
+      }
+      const vma = s.vmaRegion ? ` > ${s.vmaRegion}` : '';
+      const lma = s.lmaRegion ? ` AT> ${s.lmaRegion}` : '';
+      lines.push(`  }${vma}${lma}`);
+      lines.push('');
+    }
+    lines.push('}');
+    lines.push('');
+  }
+
+  for (const a of d.asserts) {
+    lines.push(`ASSERT(${a.condition}, "${a.message}")`);
+  }
+
+  return lines.join('\n');
 }
