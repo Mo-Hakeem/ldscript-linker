@@ -121,7 +121,7 @@ class LdSymbolProvider implements vscode.DocumentSymbolProvider {
       }
 
       braceDepth = Math.max(0, braceDepth + openBraces - closeBraces);
-      if (braceDepth === 0 && blockSym) {
+      if (closeBraces > 0 && braceDepth === 0 && blockSym) {
         blockSym.range = new vscode.Range(blockSym.range.start, document.lineAt(i).range.end);
         inBlock = null;
         blockSym = null;

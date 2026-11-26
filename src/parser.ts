@@ -159,7 +159,7 @@ export function parseLinkerScript(text: string): ParsedLd {
     }
 
     braceDepth = Math.max(0, braceDepth + openBraces - closeBraces);
-    if (braceDepth === 0) {
+    if (closeBraces > 0 && braceDepth === 0) {
       inBlock = null;
       currentSec = null;
     }
