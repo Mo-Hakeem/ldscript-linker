@@ -2,7 +2,7 @@
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
     <Identity Language="en-US" Id="ldscript-linker" Version="0.1.0" Publisher="MohamedHakeem" />
-    <DisplayName>Linker Script (GNU LD)</DisplayName>
+    <DisplayName>LinkMap — GNU Linker Script</DisplayName>
     <Description xml:space="preserve">Syntax highlighting, outline symbols, size hover, snippets, and formatting config for GNU Linker Scripts (.ld, .lds).</Description>
     <Tags>linker,linker-script,ld,lds,gnu-ld,embedded,firmware,gcc</Tags>
     <Categories>Programming Languages,Snippets,Other</Categories>

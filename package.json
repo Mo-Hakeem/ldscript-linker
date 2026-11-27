@@ -1,6 +1,6 @@
 {
   "name": "ldscript-linker",
-  "displayName": "Linker Script (GNU LD)",
+  "displayName": "LinkMap — GNU Linker Script",
   "description": "Syntax highlighting, outline symbols, size hover, snippets, and formatting config for GNU Linker Scripts (.ld, .lds).",
   "version": "0.1.0",
   "publisher": "MohamedHakeem",

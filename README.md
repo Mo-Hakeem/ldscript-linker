@@ -1,4 +1,4 @@
-# Linker Script (GNU LD)
+# LinkMap — GNU Linker Script
 
 Syntax highlighting, outline symbols, size hover, and snippets for GNU Linker Scripts (`.ld`, `.lds`, `.ldscript`).
 
