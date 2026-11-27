@@ -27,8 +27,9 @@ $contentTypes = @'
 '@
 [System.IO.File]::WriteAllText((Join-Path $stage '[Content_Types].xml'), $contentTypes, (New-Object System.Text.UTF8Encoding $false))
 
-$vsix = Join-Path $root 'ldscript-linker-0.1.0.vsix'
-Remove-Item -Force $vsix -ErrorAction SilentlyContinue
+$vsix = Join-Path $root 'linkmap-ld-0.1.0.vsix'
+$oldVsix = Join-Path $root 'ldscript-linker-0.1.0.vsix'
+Remove-Item -Force $vsix,$oldVsix -ErrorAction SilentlyContinue
 
 $zip = [System.IO.Compression.ZipFile]::Open($vsix, [System.IO.Compression.ZipArchiveMode]::Create)
 try {
